@@ -1,15 +1,22 @@
 from mem import SimSymbolicIdaMemory
+import loader
+
 import angr
 import idaapi
 import idc
 import claripy
+import cle
 
 print
 print "########### IDAngr ###########"
 print "  usage: sm = StateManager()"
 print
 print " >> creating angr project..."
-project = angr.Project(idaapi.get_input_file_path(), load_options={"auto_load_libs":False})
+
+_idangr_loader = cle.Loader(idaapi.get_input_file_path(), auto_load_libs=False, main_opts={"backend": "idadbg"})
+
+project = angr.Project(_idangr_loader)
+
 print " >> done."
 
 def StateShot():

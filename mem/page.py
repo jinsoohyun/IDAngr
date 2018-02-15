@@ -26,18 +26,21 @@ class IdaPage(paged_memory.BasePage):
         self._sinkhole = kwargs.pop("sinkhole", None)
         
         #read page permissions from debugger
-        seg = idaapi.getseg(args[0]) ### CHANGE TO SUPPORT OTHER DEBUGGERS
-        if seg is not None:
-            perms = 0
-            if seg.perm & idaapi.SEGPERM_EXEC:
-                perms += IdaPage.PROT_EXEC
-            if seg.perm & idaapi.SEGPERM_WRITE:
-                perms += IdaPage.PROT_WRITE
-            if seg.perm & idaapi.SEGPERM_READ:
-                perms += IdaPage.PROT_READ
-            kwargs["permissions"] = claripy.BVV(perms, 3)
-            #print "permissions setted %x  %d" % (args[0], perms)
-          
+        try:
+            seg = idaapi.getseg(args[0]) ### CHANGE TO SUPPORT OTHER DEBUGGERS
+            if seg is not None:
+                perms = 0
+                if seg.perm & idaapi.SEGPERM_EXEC:
+                    perms += IdaPage.PROT_EXEC
+                if seg.perm & idaapi.SEGPERM_WRITE:
+                    perms += IdaPage.PROT_WRITE
+                if seg.perm & idaapi.SEGPERM_READ:
+                    perms += IdaPage.PROT_READ
+                kwargs["permissions"] = claripy.BVV(perms, 3)
+                #print "permissions setted %x  %d" % (args[0], perms)
+        except Exception as ee:
+            print ee
+            print type(args[0]), args[0]
         super(IdaPage, self).__init__(*args, **kwargs)
         self._storage = [ None ] * self._page_size if storage is None else storage
         #print filter(lambda x: x != None, self._storage)
@@ -84,10 +87,12 @@ class IdaPage(paged_memory.BasePage):
         """
         mo = self._storage[page_idx-self._page_addr]
         #print filter(lambda x: x != None, self._storage)
-        if mo is None:    
-            byte_val = idc.Byte(page_idx) ### CHANGE TO SUPPORT OTHER DEBUGGERS
-            mo = SimMemoryObject(claripy.BVV(byte_val, 8), page_idx)
-            self._storage[page_idx-self._page_addr] = mo
+        if mo is None: 
+            try:   
+                byte_val = idc.Byte(page_idx) ### CHANGE TO SUPPORT OTHER DEBUGGERS
+                mo = SimMemoryObject(claripy.BVV(byte_val, 8), page_idx)
+                self._storage[page_idx-self._page_addr] = mo
+            except: pass
         return mo
 
     def load_slice(self, state, start, end):
@@ -106,9 +111,11 @@ class IdaPage(paged_memory.BasePage):
             i = addr - self._page_addr
             mo = self._storage[i]
             if mo is None:
-                byte_val = idc.Byte(addr) ### CHANGE TO SUPPORT OTHER DEBUGGERS
-                mo = SimMemoryObject(claripy.BVV(byte_val, 8), addr)
-                self._storage[i] = mo
+                try:
+                    byte_val = idc.Byte(addr) ### CHANGE TO SUPPORT OTHER DEBUGGERS
+                    mo = SimMemoryObject(claripy.BVV(byte_val, 8), addr)
+                    self._storage[i] = mo
+                except: pass
             if mo is not None and (not items or items[-1][1] is not mo):
                 items.append((addr, mo))
         #print filter(lambda x: x != None, self._storage)
